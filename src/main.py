@@ -1,4 +1,4 @@
-from datetime import date
+import datetime
 import random
 import colorama
 import requests
@@ -21,11 +21,11 @@ def get_token(server, password, username):
     return access_token
 
 
-def get_timetable_data(server, token):
+def get_timetable_data_week(server, token):
     _url = server + "/api/3/timetable/actual"
     header = {'Content-Type': 'application/x-www-form-urlencoded',
               'Authorization': 'Bearer ' + token}
-    params = {'date': date}
+    params = {'date': datetime.date}
 
     # Request it
     r = requests.get(url=_url, headers=header, data=params)
@@ -46,6 +46,43 @@ def get_timetable_data(server, token):
         for y in x['Atoms']:
             day_table.append([x['DayOfWeek'], y['HourId'], y['SubjectId'],
                              y['TeacherId'], y['Theme'], y['RoomId']])
+
+    # Make a nice list of period starts and ends. { Id : [ Caption, BeginTime, EndTime] }
+    hours_raw = data.get('Hours')
+    hours = {}
+    for x in hours_raw:
+        hours[x['Id']] = [x['Caption'], x['BeginTime'], x['EndTime']]
+
+    return day_table, subject_names, hours
+
+
+def get_timetable_data_today(server, token):
+    _url = server + "/api/3/timetable/actual"
+    header = {'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': 'Bearer ' + token}
+    params = {'date': datetime.date}
+
+    # Request it
+    r = requests.get(url=_url, headers=header, data=params)
+    data = r.json()
+
+    # Make a nice dictionary of Ids : [Abbreviations, Id, Name]
+    subject_names_raw = data.get('Subjects')
+    subject_names = {}
+    for x in subject_names_raw:
+        subject_names[x['Id']] = [x['Abbrev'], x['Id'], x['Name']]
+        if x['Abbrev'] == None:
+            subject_names[x['Id']] = x['']
+
+    # Make a nice list of [DayOfWeek, HourID, SubjectId, TeacherId, Theme, HourAt, RoomId, ]
+    day_table_raw = data.get('Days')
+    day_table = []
+    for x in day_table_raw:
+        # Use DayOfWeek to determine what is today
+        if x['DayOfWeek'] == datetime.datetime.today().weekday():
+            for y in x['Atoms']:
+                day_table.append([x['DayOfWeek'], y['HourId'], y['SubjectId'],
+                                y['TeacherId'], y['Theme'], y['RoomId']])
 
     # Make a nice list of period starts and ends. { Id : [ Caption, BeginTime, EndTime] }
     hours_raw = data.get('Hours')
@@ -111,23 +148,53 @@ def display_timetable_data_table(data):
     # print(mod_table)
 
 
-def timetable(server, password, username):
-    token = get_token(server, password, username)
-    display_timetable_data_table(get_timetable_data(server, token))
+def display_timetable_data_simple(data):
+    # Default table display like in the web version
 
-# Parsing
+    table_raw = data[0]
+    subjects = data[1]
+    hours = data[2]
+    table = ['']
+    headers = []
+
+    # Init
+    for x in range(len(hours)):
+        table.append('')
+
+    for x in table_raw:
+        name = '' if subjects.get(x[2]) == None else subjects.get(x[2])[0]
+        day = x[0]
+
+        # Add blank entries if day doesn't exist
+
+        table[x[1]] = name
+
+    r = ' '.join(str(x) for x in table) # Array.join
+
+    r = r.lstrip().rstrip()
+
+    print(r)
+
+def timetable_week(server, password, username):
+    token = get_token(server, password, username)
+    display_timetable_data_table(get_timetable_data_week(server, token))
+
+def timetable_simple(server, password, username):
+    token = get_token(server, password, username)
+    display_timetable_data_simple(get_timetable_data_today(server, token))
 
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "hs:p:u:t", [
-                                       "server", "password", "username", "homework"])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "hs:p:u:t:c", [
+                                       "server", "password", "username", "homework", "compact"])
     except getopt.GetoptError:
         print('main.py -s example.bakalari.cz -p password -u username')
         sys.exit(2)
     server = ""
     password = ""
     username = ""
+    simple = False
 
     for opt, arg in opts:
         if opt == '-h':
@@ -139,8 +206,13 @@ def main():
             password = arg
         elif opt in ("-u", "--username"):
             username = arg
+        elif opt in ("-c", "--compact"):
+            simple = True
 
-    timetable(server, password, username)
+    if simple:
+        timetable_simple(server, password, username)
+    else:
+        timetable_week(server, password, username)
 
 
 if __name__ == "__main__":
