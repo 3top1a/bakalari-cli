@@ -6,7 +6,44 @@ from tabulate import tabulate
 import os
 import sys
 import getopt
+import sympy
 
+# Non-bakalari functions
+
+# function to convert to subscript
+def get_sup(x):
+    superscript_map = {
+        "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶",
+        "7": "⁷", "8": "⁸", "9": "⁹", "a": "ᵃ", "b": "ᵇ", "c": "ᶜ", "d": "ᵈ",
+        "e": "ᵉ", "f": "ᶠ", "g": "ᵍ", "h": "ʰ", "i": "ᶦ", "j": "ʲ", "k": "ᵏ",
+        "l": "ˡ", "m": "ᵐ", "n": "ⁿ", "o": "ᵒ", "p": "ᵖ", "q": "۹", "r": "ʳ",
+        "s": "ˢ", "t": "ᵗ", "u": "ᵘ", "v": "ᵛ", "w": "ʷ", "x": "ˣ", "y": "ʸ",
+        "z": "ᶻ", "A": "ᴬ", "B": "ᴮ", "C": "ᶜ", "D": "ᴰ", "E": "ᴱ", "F": "ᶠ",
+        "G": "ᴳ", "H": "ᴴ", "I": "ᴵ", "J": "ᴶ", "K": "ᴷ", "L": "ᴸ", "M": "ᴹ",
+        "N": "ᴺ", "O": "ᴼ", "P": "ᴾ", "Q": "Q", "R": "ᴿ", "S": "ˢ", "T": "ᵀ",
+        "U": "ᵁ", "V": "ⱽ", "W": "ᵂ", "X": "ˣ", "Y": "ʸ", "Z": "ᶻ", "+": "⁺",
+        "-": "⁻", "=": "⁼", "(": "⁽", ")": "⁾"}
+    res = str.maketrans(
+        ''.join(superscript_map.keys()),
+        ''.join(superscript_map.values()))
+    return x.translate(res)
+
+def get_sub(x):
+    subscript_map = {
+        "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆",
+        "7": "₇", "8": "₈", "9": "₉", "a": "ₐ", "b": "♭", "c": "꜀", "d": "ᑯ",
+        "e": "ₑ", "f": "բ", "g": "₉", "h": "ₕ", "i": "ᵢ", "j": "ⱼ", "k": "ₖ",
+        "l": "ₗ", "m": "ₘ", "n": "ₙ", "o": "ₒ", "p": "ₚ", "q": "૧", "r": "ᵣ",
+        "s": "ₛ", "t": "ₜ", "u": "ᵤ", "v": "ᵥ", "w": "w", "x": "ₓ", "y": "ᵧ",
+        "z": "₂", "A": "ₐ", "B": "₈", "C": "C", "D": "D", "E": "ₑ", "F": "բ",
+        "G": "G", "H": "ₕ", "I": "ᵢ", "J": "ⱼ", "K": "ₖ", "L": "ₗ", "M": "ₘ",
+        "N": "ₙ", "O": "ₒ", "P": "ₚ", "Q": "Q", "R": "ᵣ", "S": "ₛ", "T": "ₜ",
+        "U": "ᵤ", "V": "ᵥ", "W": "w", "X": "ₓ", "Y": "ᵧ", "Z": "Z", "+": "₊",
+        "-": "₋", "=": "₌", "(": "₍", ")": "₎"}
+    res = str.maketrans(
+        ''.join(subscript_map.keys()),
+        ''.join(subscript_map.values()))
+    return x.translate(res)
 
 # Gets the accesstoken. Returns access token
 def get_token(server, password, username):
@@ -15,7 +52,11 @@ def get_token(server, password, username):
     params = {'grant_type': 'password', 'client_id': 'ANDR',
               'username': username, 'password': password}
 
-    r = requests.post(url=_url, headers=header, data=params)
+    try:
+        r = requests.post(url=_url, headers=header, data=params)
+    except requests.exceptions.ConnectionError:
+        print("Connection error")
+        exit()
     data = r.json()
     access_token = data.get('access_token')
     return access_token
@@ -28,7 +69,11 @@ def get_timetable_data_week(server, token):
     params = {'date': datetime.date}
 
     # Request it
-    r = requests.get(url=_url, headers=header, data=params)
+    try:
+        r = requests.post(url=_url, headers=header, data=params)
+    except ConnectionError:
+        print("Connection error")
+        exit()
     data = r.json()
 
     # Make a nice dictionary of Ids : [Abbreviations, Id, Name]
@@ -63,7 +108,11 @@ def get_timetable_data_today(server, token):
     params = {'date': datetime.date}
 
     # Request it
-    r = requests.get(url=_url, headers=header, data=params)
+    try:
+        r = requests.post(url=_url, headers=header, data=params)
+    except ConnectionError:
+        print("Connection error")
+        exit()
     data = r.json()
 
     # Make a nice dictionary of Ids : [Abbreviations, Id, Name]
@@ -79,7 +128,7 @@ def get_timetable_data_today(server, token):
     day_table = []
     for x in day_table_raw:
         # Use DayOfWeek to determine what is today
-        if x['DayOfWeek'] == datetime.datetime.today().weekday():
+        if x['DayOfWeek'] == datetime.datetime.today().weekday() + 1:
             for y in x['Atoms']:
                 day_table.append([x['DayOfWeek'], y['HourId'], y['SubjectId'],
                                 y['TeacherId'], y['Theme'], y['RoomId']])
@@ -162,14 +211,12 @@ def display_timetable_data_simple(data):
         table.append('')
 
     for x in table_raw:
+        # Add blank entries if day doesn't exist
         name = '' if subjects.get(x[2]) == None else subjects.get(x[2])[0]
         day = x[0]
-
-        # Add blank entries if day doesn't exist
-
         table[x[1]] = name
 
-    r = ' '.join(str(x) for x in table) # Array.join
+    r = ' '.join(str(x) for x in table) # Basically JS's Array.join
 
     r = r.lstrip().rstrip()
 
