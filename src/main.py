@@ -66,11 +66,11 @@ def get_timetable_data_week(server, token):
     _url = server + "/api/3/timetable/actual"
     header = {'Content-Type': 'application/x-www-form-urlencoded',
               'Authorization': 'Bearer ' + token}
-    params = {'date': datetime.date}
+    params = {'date': datetime.date.today().strftime('%Y-%m-%d')}
 
     # Request it
     try:
-        r = requests.post(url=_url, headers=header, data=params)
+        r = requests.get(url=_url, headers=header, data=params)
     except ConnectionError:
         print("Connection error")
         exit()
@@ -105,11 +105,11 @@ def get_timetable_data_today(server, token):
     _url = server + "/api/3/timetable/actual"
     header = {'Content-Type': 'application/x-www-form-urlencoded',
               'Authorization': 'Bearer ' + token}
-    params = {'date': datetime.date}
+    params = {'date': datetime.date.today().strftime('%Y-%m-%d')}
 
     # Request it
     try:
-        r = requests.post(url=_url, headers=header, data=params)
+        r = requests.get(url=_url, headers=header, data=params)
     except ConnectionError:
         print("Connection error")
         exit()
