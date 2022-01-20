@@ -214,11 +214,11 @@ def display_timetable_data_simple(data):
         # Add blank entries if day doesn't exist
         name = '' if subjects.get(x[2]) == None else subjects.get(x[2])[0]
         day = x[0]
-        table[x[1]] = name
+        table[x[1]] = get_sup(hours[x[1]][1]).strip().split(':')[1] + name + get_sub(hours[x[1]][2]).strip().split(':')[1]
 
     r = ' '.join(str(x) for x in table) # Basically JS's Array.join
 
-    r = r.lstrip().rstrip()
+    r = r.strip() # Remove whitespaces
 
     print(r)
 
